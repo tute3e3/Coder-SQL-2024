@@ -56,7 +56,7 @@ CREATE TABLE servicio_proyecto (
 );
 
 CREATE TABLE facturacion (
-    id int PRIMARY KEY,
+    idFacturacion int PRIMARY KEY,
     monto decimal(10,2),
     descripcion varchar(100),
     fecha date
