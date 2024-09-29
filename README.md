@@ -1,0 +1,1 @@
+En esta carpeta se dispone un archivo "script.sql" que dispone el código completo para realizar una sola ejecución completa tanto de la creación de la base, como su inserción de datos y creación de objetos.
