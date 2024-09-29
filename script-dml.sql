@@ -2,6 +2,13 @@
 =                   INSERCIÓN DE DATOS                    =
 =========================================================== */
 
+-- Tabla "roles"
+INSERT INTO roles (idRol, nombre, descripcion) VALUES
+(1, 'Data Engineer', 'Especialista en desarrollo de pipelines de datos'),
+(2, 'Data Scientist', 'Especialista en análisis de datos y modelado'),
+(3, 'Consultor Big Data', 'Consultor en soluciones de infraestructura Big Data'),
+(4, 'Database Administrator', 'Administrador de bases de datos');
+
 -- Tabla "empresa"
 INSERT INTO empresa (idEmpresa, nombre, pais, area) VALUES
 (1, 'TechCorp', 'Estados Unidos', 'Tecnología'),
@@ -33,7 +40,7 @@ INSERT INTO servicio (idServicio, descripcion, tecnologia, cliente) VALUES
 (5, 'Optimización de bases de datos', 2, 1);
 
 -- Tabla "facturacion"
-INSERT INTO facturacion (id, monto, descripcion, fecha) VALUES
+INSERT INTO facturacion (idFacturacion, monto, descripcion, fecha) VALUES
 (1, 10000.00, 'Factura para desarrollo de pipeline de datos', '2024-01-15'),
 (2, 15000.00, 'Factura para análisis de datos en la nube', '2024-02-20'),
 (3, 12000.00, 'Factura para implementación de modelos predictivos', '2024-03-10'),
@@ -47,13 +54,6 @@ INSERT INTO empleado (idEmpleado, nombre, email, edad, rol) VALUES
 (3, 'Clara Martinez', 'clara@innovadata.es', 35, 3),
 (4, 'Daniel Oliveira', 'daniel@bigsolutions.br', 32, 4),
 (5, 'Eva Ruiz', 'eva@techcorp.com', 29, 1);
-
--- Tabla "roles"
-INSERT INTO roles (idRol, nombre, descripcion) VALUES
-(1, 'Data Engineer', 'Especialista en desarrollo de pipelines de datos'),
-(2, 'Data Scientist', 'Especialista en análisis de datos y modelado'),
-(3, 'Consultor Big Data', 'Consultor en soluciones de infraestructura Big Data'),
-(4, 'Database Administrator', 'Administrador de bases de datos');
 
 -- Tabla "proyecto"
 INSERT INTO proyecto (idProyecto, nombre, descripcion, horasTotales, servicio, empleado) VALUES
@@ -108,7 +108,7 @@ SELECT
     e.nombre AS Empresa,
     SUM(f.monto) AS FacturacionTotal
 FROM facturacion f
-JOIN proyecto p ON f.id = p.horasTotales
+JOIN proyecto p ON f.idFacturacion = p.horasTotales
 JOIN servicio s ON p.servicio = s.idServicio
 JOIN cliente c ON s.cliente = c.idCliente
 JOIN empresa e ON c.empresa = e.idEmpresa
@@ -154,6 +154,7 @@ JOIN tecnologia t ON s.tecnologia = t.idTecnologia;
 =========================================================== */
 
 -- Actualizacion de Facturaciones de Proyectos
+DELIMITER $$
 CREATE PROCEDURE sp_ActualizarFacturacionProyecto(
     IN p_idProyecto INT,
     IN p_montoAdicional DECIMAL(10,2)
@@ -170,9 +171,12 @@ BEGIN
     UPDATE facturacion
     SET monto = monto + p_montoAdicional
     WHERE id = v_idFacturacion;
-END;
+END $$
+
+DELIMITER ;
 
 -- Creacion de tareas para empleados
+DELIMITER $$
 CREATE PROCEDURE sp_InsertarTareaEmpleado(
     IN p_descripcion VARCHAR(100),
     IN p_fecha DATE,
@@ -182,39 +186,49 @@ CREATE PROCEDURE sp_InsertarTareaEmpleado(
 BEGIN
     INSERT INTO tarea (descripcion, fecha, rol, empleado)
     VALUES (p_descripcion, p_fecha, p_rol, p_empleado);
-END;
+END $$
 
+DELIMITER ;
 
 /*=========================================================
 =                        TRIGGERS                         =
 =========================================================== */
 
 -- Actualizacion de Monto: Facturacion
+DELIMITER $$
 CREATE TRIGGER trg_ActualizarMontoFacturacion
 AFTER INSERT ON facturacion
 FOR EACH ROW
 BEGIN
     UPDATE proyecto
     SET horasTotales = horasTotales + NEW.monto
-    WHERE horasTotales = NEW.id;
-END;
+    WHERE horasTotales = NEW.idFacturacion;
+END $$
 
--- Actualizar datos de Empleados
-CREATE TRIGGER trg_ActualizarEdadEmpleado
-BEFORE UPDATE ON empleado
+DELIMITER ;
+
+-- Establecer valor default para edad de empleados
+DELIMITER $$
+CREATE TRIGGER trg_EstablecerEdadEmpleado
+BEFORE INSERT ON empleado
 FOR EACH ROW
 BEGIN
-    SET NEW.edad = TIMESTAMPDIFF(YEAR, NEW.fechaNacimiento, CURDATE());
-END;
+    IF NEW.edad IS NULL THEN
+        SET NEW.edad = 0;
+    END IF;
+END $$
 
+DELIMITER ;
 
 /*=========================================================
 =                        FUNCIONES                        =
 =========================================================== */
 
 -- Obtener montos facturados
+DELIMITER $$
 CREATE FUNCTION obtener_montoTotal_facturado(p_idCliente INT)
 RETURNS DECIMAL(10,2)
+DETERMINISTIC
 BEGIN
     DECLARE v_montoTotal DECIMAL(10,2);
     
@@ -226,11 +240,15 @@ BEGIN
     WHERE s.cliente = p_idCliente;
 
     RETURN v_montoTotal;
-END;
+END $$
+
+DELIMITER ;
 
 -- Contar proyectos x empleado
+DELIMITER $$
 CREATE FUNCTION contar_ProyectosPorEmpleado(p_idEmpleado INT)
 RETURNS INT
+DETERMINISTIC
 BEGIN
     DECLARE v_totalProyectos INT;
     
@@ -240,4 +258,6 @@ BEGIN
     WHERE empleado = p_idEmpleado;
 
     RETURN v_totalProyectos;
-END;
+END $$
+
+DELIMITER ;
